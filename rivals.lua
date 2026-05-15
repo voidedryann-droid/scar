@@ -1,6 +1,9 @@
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
+
+-- Wait 15 seconds to ensure UE Ragebot and other executors fully load and initialize their camera hooks before scar.lol loads
+task.wait(15)
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local rs = game:GetService("RunService")
@@ -40,40 +43,6 @@ local orbitConnection
 local voidActive = false
 local orbitActive = false
 local autoExecute = false
-local fakeCameraPart = nil
-
-local function enableFakeCamera()
-    local character = Players.LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        if not fakeCameraPart or fakeCameraPart.Parent ~= character then
-            if fakeCameraPart then pcall(function() fakeCameraPart:Destroy() end) end
-            fakeCameraPart = Instance.new("Part")
-            fakeCameraPart.Name = "ScarFakeCam"
-            fakeCameraPart.Transparency = 1
-            fakeCameraPart.Anchored = true
-            fakeCameraPart.CanCollide = false
-            fakeCameraPart.CanQuery = false -- Fixes ragebot bug
-            fakeCameraPart.Size = Vector3.new(1, 1, 1)
-            fakeCameraPart.Position = character.HumanoidRootPart.Position
-            fakeCameraPart.Parent = character -- Fixes ragebot aiming bug
-        end
-        workspace.CurrentCamera.CameraSubject = fakeCameraPart
-    end
-end
-
-local function disableFakeCamera()
-    if not voidActive and not orbitActive then
-        if fakeCameraPart then
-            fakeCameraPart:Destroy()
-            fakeCameraPart = nil
-        end
-        local character = Players.LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            workspace.CurrentCamera.CameraSubject = character.Humanoid
-        end
-    end
-end
-
 local function loadConfig()
     local success, result = pcall(function()
         if isfile and not isfile(configFileName) then error("File not found") end
@@ -306,7 +275,6 @@ local function toggleVoid(forceState)
     end
     
     if voidActive then
-        enableFakeCamera()
         UpdateStatus()
         tween(VoidButton, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)}, 0.3) -- Active color
         
@@ -322,7 +290,6 @@ local function toggleVoid(forceState)
                         lastHrp = hrp
                         spawnDelay = tick() + 2 -- Wait 2 seconds for safe spawn
                         clientc = hrp.CFrame
-                        enableFakeCamera() -- Reset camera on respawn!
                     end
                     
                     if tick() < spawnDelay then
@@ -362,7 +329,6 @@ local function toggleVoid(forceState)
             hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         end
-        disableFakeCamera()
     end
     saveConfig()
 end
@@ -408,7 +374,6 @@ local function toggleOrbit(forceState)
     end
     
     if orbitActive then
-        enableFakeCamera()
         UpdateStatus()
         tween(OrbitButton, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)}, 0.3)
         
@@ -426,7 +391,6 @@ local function toggleOrbit(forceState)
                 if hrp_orbit then
                     if hrp_orbit ~= lastOrbitHrp then
                         lastOrbitHrp = hrp_orbit
-                        enableFakeCamera() -- Reset camera on respawn!
                     end
                     
                     local now = tick()
@@ -461,7 +425,6 @@ local function toggleOrbit(forceState)
         UpdateStatus()
         tween(OrbitButton, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)}, 0.3)
         if orbitConnection then orbitConnection:Disconnect() end
-        disableFakeCamera()
     end
     saveConfig()
 end
