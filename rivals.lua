@@ -201,13 +201,11 @@ local function toggleVoid(force)
                 hrp.AssemblyLinearVelocity = Vector3.new(getVoidValue(), getVoidValue(), getVoidValue())
                 
                 -- Find target to orbit camera
-                local closest, dist = nil, 1000
+                local closest, dist = nil, 10000 -- Massive range
                 for _, v in pairs(Players:GetPlayers()) do
                     if v ~= Players.LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                        local d = (v.Character.HumanoidRootPart.Position - hrp.Position).Magnitude -- Distance from void to player
-                        -- Camera should target players near the actual map, not relative to void position
                         closest = v.Character.HumanoidRootPart
-                        break -- Just take the first valid target for performance during jitter
+                        break -- Just take the first valid target
                     end
                 end
                 
@@ -238,9 +236,10 @@ local function toggleOrbit(force)
             local char = Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                local closest, dist = nil, 250
+                local closest, dist = nil, 10000 -- Massive range
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        -- Target everyone including other void spammers
                         local d = (p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
                         if d < dist then closest, dist = p.Character.HumanoidRootPart, d end
                     end
