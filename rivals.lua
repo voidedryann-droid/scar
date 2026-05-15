@@ -71,6 +71,11 @@ local function saveConfig()
     end
 end
 
+local function getVoidValue()
+    local val = math.random(1147483646, 2147483646)
+    return math.random() > 0.5 and val or -val
+end
+
 --------------------------------------------------
 -- GUI CREATION (STAYING SCAR.LOL STYLE)
 --------------------------------------------------
@@ -191,21 +196,25 @@ local function toggleVoid(force)
             local char = Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                hrp.CFrame = CFrame.new(0, -500, 0) -- Astral Void Pos
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                -- Rapid Teleportation in high altitude void
+                hrp.CFrame = CFrame.new(getVoidValue(), math.random(200000, 500000), getVoidValue())
+                hrp.AssemblyLinearVelocity = Vector3.new(getVoidValue(), getVoidValue(), getVoidValue())
                 
                 -- Find target to orbit camera
-                local closest, dist = nil, 500
+                local closest, dist = nil, 1000
                 for _, v in pairs(Players:GetPlayers()) do
                     if v ~= Players.LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                        local d = (hrp.Position - v.Character.HumanoidRootPart.Position).Magnitude
-                        if d < dist then closest, dist = v.Character.HumanoidRootPart, d end
+                        local d = (v.Character.HumanoidRootPart.Position - hrp.Position).Magnitude -- Distance from void to player
+                        -- Camera should target players near the actual map, not relative to void position
+                        closest = v.Character.HumanoidRootPart
+                        break -- Just take the first valid target for performance during jitter
                     end
                 end
+                
                 if closest then
                     local angle = tick() * 2
                     local offset = Vector3.new(math.cos(angle)*10, 5, math.sin(angle)*10)
-                    Camera.CFrame = CFrame.new(Vector3.new(0, -500, 0), closest.Position + offset)
+                    Camera.CFrame = CFrame.new(Vector3.new(0, 50, 0), closest.Position + offset)
                 end
             end
         end)
