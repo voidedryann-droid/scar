@@ -326,18 +326,21 @@ end
 FPSBtn = createBtn("FPS BOOSTER", 295, toggleFPS)
 
 -- CLOSE / AUTO
-local AutoButton = Instance.new("TextButton", MainFrame)
-AutoButton.BackgroundTransparency = 1
-AutoButton.Position = UDim2.new(0, 5, 0, 5)
-AutoButton.Size = UDim2.new(0, 40, 0, 20)
-AutoButton.Font = Enum.Font.GothamBold
-AutoButton.Text = "AUTO"
-AutoButton.TextColor3 = Color3.fromRGB(150, 150, 150)
-AutoButton.TextSize = 12
+local function applyQueueOnTeleport()
+    if autoExecute then
+        local env = (getgenv and getgenv()) or getfenv(0)
+        local qot = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or env.queue_on_teleport or env.queueonteleport
+        if qot then
+            local code = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/voidedryann-droid/scar/refs/heads/main/rivals.lua?t=" .. tostring(tick())))()]]
+            pcall(function() qot(code) end)
+        end
+    end
+end
 
 AutoButton.MouseButton1Click:Connect(function()
     autoExecute = not autoExecute
     tween(AutoButton, {TextColor3 = autoExecute and Color3.fromRGB(180, 140, 255) or Color3.fromRGB(150, 150, 150)})
+    if autoExecute then applyQueueOnTeleport() end
     saveConfig()
 end)
 
@@ -397,6 +400,7 @@ task.spawn(function()
     autoExecute = cfg.autoExecute or false
     if autoExecute then
         AutoButton.TextColor3 = Color3.fromRGB(180, 140, 255)
+        applyQueueOnTeleport()
         if cfg.voidActive then toggleVoid(true) end
         if cfg.orbitActive then toggleOrbit(true) end
         if cfg.autoCollect then toggleCollect(true) end
