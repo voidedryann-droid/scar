@@ -326,6 +326,15 @@ end
 FPSBtn = createBtn("FPS BOOSTER", 295, toggleFPS)
 
 -- CLOSE / AUTO
+local AutoButton = Instance.new("TextButton", MainFrame)
+AutoButton.BackgroundTransparency = 1
+AutoButton.Position = UDim2.new(0, 5, 0, 5)
+AutoButton.Size = UDim2.new(0, 40, 0, 20)
+AutoButton.Font = Enum.Font.GothamBold
+AutoButton.Text = "AUTO"
+AutoButton.TextColor3 = Color3.fromRGB(150, 150, 150)
+AutoButton.TextSize = 12
+
 local function applyQueueOnTeleport()
     if autoExecute then
         local env = (getgenv and getgenv()) or getfenv(0)
