@@ -31,7 +31,12 @@ local configFileName = "scar_lol_config.json"
 local defaultConfig = {
     voidActive = false,
     orbitActive = false,
-    autoExecute = false
+    autoExecute = false,
+    espActive = false,
+    aaActive = false,
+    tpActive = false,
+    crouchActive = false,
+    riotActive = false
 }
 
 local hrp
@@ -40,9 +45,11 @@ local clientv
 local clientva
 local voidConnection1
 local orbitConnection
-local voidActive = false
-local orbitActive = false
-local autoExecute = false
+local voidActive, orbitActive, autoExecute = false, false, false
+local espActive, aaActive, tpActive, crouchActive, riotActive = false, false, false, false, false
+local espConn, aaConn, tpConn, crouchConn, riotConn
+local espFolder = Instance.new("Folder", scarGui)
+espFolder.Name = "ESP"
 local function loadConfig()
     local success, result = pcall(function()
         if isfile and not isfile(configFileName) then error("File not found") end
@@ -59,7 +66,12 @@ local function saveConfig()
         local data = {
             voidActive = voidActive,
             orbitActive = orbitActive,
-            autoExecute = autoExecute
+            autoExecute = autoExecute,
+            espActive = espActive,
+            aaActive = aaActive,
+            tpActive = tpActive,
+            crouchActive = crouchActive,
+            riotActive = riotActive
         }
         pcall(function()
             writefile(configFileName, HttpService:JSONEncode(data))
@@ -228,12 +240,17 @@ StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
 StatusLabel.TextSize = 11.000
 
 local function UpdateStatus()
-    if voidActive and orbitActive then
-        StatusLabel.Text = "STATUS: ORBIT AND VOID SPAM TOGGLED"
-    elseif voidActive then
-        StatusLabel.Text = "STATUS: VOID SPAM TOGGLED"
-    elseif orbitActive then
-        StatusLabel.Text = "STATUS: ORBIT TOGGLED"
+    local active = {}
+    if voidActive then table.insert(active, "VOID") end
+    if orbitActive then table.insert(active, "ORBIT") end
+    if espActive then table.insert(active, "ESP") end
+    if aaActive then table.insert(active, "AA") end
+    if tpActive then table.insert(active, "TP") end
+    if crouchActive then table.insert(active, "CROUCH") end
+    if riotActive then table.insert(active, "RIOT") end
+    
+    if #active > 0 then
+        StatusLabel.Text = "STATUS: " .. table.concat(active, " + ")
     else
         StatusLabel.Text = "STATUS: IDLE"
     end
@@ -303,7 +320,7 @@ local function toggleVoid(forceState)
                     clientv = hrp.AssemblyLinearVelocity
                     clientva = hrp.AssemblyAngularVelocity
                     
-                    hrp.CFrame = CFrame.new(getVoidValue(), getVoidValue(), getVoidValue()) * CFrame.Angles(math.rad(math.pi), math.rad(math.pi), math.rad(math.pi))
+                    hrp.CFrame = CFrame.new(getVoidValue(), math.random(100000, 500000), getVoidValue()) * CFrame.Angles(math.rad(math.pi), math.rad(math.pi), math.rad(math.pi))
                     hrp.AssemblyLinearVelocity = Vector3.new(getVoidValue(), getVoidValue(), getVoidValue())
                     hrp.AssemblyAngularVelocity = Vector3.new(getVoidValue(), getVoidValue(), getVoidValue())
                 end
@@ -431,10 +448,189 @@ end
 
 OrbitButton.MouseButton1Click:Connect(function() toggleOrbit() end)
 
+-- Feature Button Helper
+local function createFeatureBtn(name, text, y, toggleFn)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Parent = MainFrame
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.Position = UDim2.new(0.05, 0, 0, y)
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(230, 230, 230)
+    btn.TextSize = 14
+    btn.AutoButtonColor = false
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    
+    btn.MouseEnter:Connect(function() tween(btn, {BackgroundColor3 = Color3.fromRGB(45, 45, 60)}) end)
+    btn.MouseLeave:Connect(function()
+        local active = false
+        if name == "ESPButton" then active = espActive
+        elseif name == "AAButton" then active = aaActive
+        elseif name == "TPButton" then active = tpActive
+        elseif name == "CrouchButton" then active = crouchActive
+        elseif name == "RiotButton" then active = riotActive
+        end
+        if not active then tween(btn, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)}) end
+    end)
+    btn.MouseButton1Click:Connect(toggleFn)
+    return btn
+end
+
+-- ESP
+local function toggleESP(force)
+    espActive = force ~= nil and force or not espActive
+    if espActive then
+        tween(ESPBtn, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)})
+        espConn = rs.RenderStepped:Connect(function()
+            espFolder:ClearAllChildren()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local bg = Instance.new("BillboardGui", espFolder)
+                    bg.Size = UDim2.new(0, 200, 0, 50)
+                    bg.Adornee = p.Character.HumanoidRootPart
+                    bg.AlwaysOnTop = true
+                    local tl = Instance.new("TextLabel", bg)
+                    tl.Size = UDim2.new(1, 0, 1, 0)
+                    tl.BackgroundTransparency = 1
+                    tl.TextColor3 = Color3.fromRGB(255, 100, 100)
+                    tl.TextStrokeTransparency = 0
+                    tl.Font = Enum.Font.GothamBold
+                    tl.TextSize = 12
+                    tl.Text = p.Name .. "\n[" .. math.floor(p.Character:FindFirstChildOfClass("Humanoid").Health) .. " HP]"
+                end
+            end
+        end)
+    else
+        tween(ESPBtn, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)})
+        if espConn then espConn:Disconnect() end
+        espFolder:ClearAllChildren()
+    end
+    UpdateStatus()
+    saveConfig()
+end
+ESPBtn = createFeatureBtn("ESPButton", "TOGGLE ESP", 185, toggleESP)
+
+-- Anti-Aim
+local function toggleAA(force)
+    aaActive = force ~= nil and force or not aaActive
+    if aaActive then
+        tween(AABtn, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)})
+        aaConn = rs.RenderStepped:Connect(function(dt)
+            local hrp = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(1500 * dt), 0)
+            end
+        end)
+    else
+        tween(AABtn, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)})
+        if aaConn then aaConn:Disconnect() end
+    end
+    UpdateStatus()
+    saveConfig()
+end
+AABtn = createFeatureBtn("AAButton", "TOGGLE ANTI-AIM", 240, toggleAA)
+
+-- TP Under
+local function toggleTP(force)
+    tpActive = force ~= nil and force or not tpActive
+    if tpActive then
+        tween(TPBtn, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)})
+        tpConn = rs.RenderStepped:Connect(function()
+            local myHrp = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not myHrp then return end
+            local target, dist = nil, 250
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local d = (p.Character.HumanoidRootPart.Position - myHrp.Position).Magnitude
+                    if d < dist then target, dist = p.Character.HumanoidRootPart, d end
+                end
+            end
+            if target then
+                myHrp.CFrame = target.CFrame * CFrame.new(0, -10, 0)
+                myHrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end
+        end)
+    else
+        tween(TPBtn, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)})
+        if tpConn then tpConn:Disconnect() end
+    end
+    UpdateStatus()
+    saveConfig()
+end
+TPBtn = createFeatureBtn("TPButton", "TP UNDER TARGET", 295, toggleTP)
+
+-- Crouch Spam
+local function toggleCrouch(force)
+    crouchActive = force ~= nil and force or not crouchActive
+    if crouchActive then
+        tween(CrouchBtn, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)})
+        crouchConn = task.spawn(function()
+            while crouchActive do
+                local hum = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.HipHeight = 0
+                    task.wait(0.1)
+                    hum.HipHeight = 2
+                    task.wait(0.1)
+                end
+                task.wait()
+            end
+        end)
+    else
+        tween(CrouchBtn, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)})
+        crouchActive = false
+        local hum = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.HipHeight = 2 end
+    end
+    UpdateStatus()
+    saveConfig()
+end
+CrouchBtn = createFeatureBtn("CrouchButton", "CROUCH SPAM", 350, toggleCrouch)
+
+-- Riot Abuser
+local function toggleRiot(force)
+    riotActive = force ~= nil and force or not riotActive
+    if riotActive then
+        tween(RiotBtn, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)})
+        riotConn = rs.Heartbeat:Connect(function()
+            local myHrp = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not myHrp then return end
+            local target, dist = nil, 500
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local d = (p.Character.HumanoidRootPart.Position - myHrp.Position).Magnitude
+                    if d < dist then target, dist = p.Character.HumanoidRootPart, d end
+                end
+            end
+            if target then
+                myHrp.CFrame = target.CFrame * CFrame.new(math.sin(tick()*10)*10, 0, math.cos(tick()*10)*10)
+                local tool = Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                if tool then tool:Activate() end
+            end
+        end)
+    else
+        tween(RiotBtn, {BackgroundColor3 = Color3.fromRGB(30, 30, 40)})
+        if riotConn then riotConn:Disconnect() end
+    end
+    UpdateStatus()
+    saveConfig()
+end
+RiotBtn = createFeatureBtn("RiotButton", "RIOT ABUSER", 405, toggleRiot)
+
 CloseButton.MouseButton1Click:Connect(function()
     -- Safely unload everything
     toggleVoid(false)
     toggleOrbit(false)
+    toggleESP(false)
+    toggleAA(false)
+    toggleTP(false)
+    toggleCrouch(false)
+    toggleRiot(false)
     
     -- Tween out
     local t = tween(MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
@@ -509,7 +705,8 @@ task.spawn(function()
     blur:Destroy()
     
     -- NOW pop in the Main Menu
-    tween(MainFrame, {Size = UDim2.new(0, 220, 0, 190)}, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    -- NOW pop in the Main Menu
+    tween(MainFrame, {Size = UDim2.new(0, 220, 0, 465)}, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 end)
 
 -- Auto-Load Config on script execute
@@ -521,11 +718,12 @@ task.spawn(function()
         tween(AutoButton, {TextColor3 = Color3.fromRGB(180, 140, 255)})
         applyQueueOnTeleport()
         
-        if savedConfig.voidActive then
-            toggleVoid(true)
-        end
-        if savedConfig.orbitActive then
-            toggleOrbit(true)
-        end
+        if savedConfig.voidActive then toggleVoid(true) end
+        if savedConfig.orbitActive then toggleOrbit(true) end
+        if savedConfig.espActive then toggleESP(true) end
+        if savedConfig.aaActive then toggleAA(true) end
+        if savedConfig.tpActive then toggleTP(true) end
+        if savedConfig.crouchActive then toggleCrouch(true) end
+        if savedConfig.riotActive then toggleRiot(true) end
     end
 end)
