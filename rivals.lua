@@ -43,19 +43,21 @@ local autoExecute = false
 local fakeCameraPart = nil
 
 local function enableFakeCamera()
-    if not fakeCameraPart then
-        local character = Players.LocalPlayer.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
+    local character = Players.LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        if not fakeCameraPart or fakeCameraPart.Parent ~= character then
+            if fakeCameraPart then pcall(function() fakeCameraPart:Destroy() end) end
             fakeCameraPart = Instance.new("Part")
             fakeCameraPart.Name = "ScarFakeCam"
             fakeCameraPart.Transparency = 1
             fakeCameraPart.Anchored = true
             fakeCameraPart.CanCollide = false
+            fakeCameraPart.CanQuery = false -- Fixes ragebot bug
+            fakeCameraPart.Size = Vector3.new(1, 1, 1)
             fakeCameraPart.Position = character.HumanoidRootPart.Position
-            fakeCameraPart.Parent = workspace
-            
-            workspace.CurrentCamera.CameraSubject = fakeCameraPart
+            fakeCameraPart.Parent = character -- Fixes ragebot aiming bug
         end
+        workspace.CurrentCamera.CameraSubject = fakeCameraPart
     end
 end
 
@@ -320,6 +322,7 @@ local function toggleVoid(forceState)
                         lastHrp = hrp
                         spawnDelay = tick() + 2 -- Wait 2 seconds for safe spawn
                         clientc = hrp.CFrame
+                        enableFakeCamera() -- Reset camera on respawn!
                     end
                     
                     if tick() < spawnDelay then
@@ -414,12 +417,18 @@ local function toggleOrbit(forceState)
         local speed = 8
         local closest = nil
         local lastTargetUpdate = 0
+        local lastOrbitHrp = nil
         
         orbitConnection = rs.RenderStepped:Connect(function(dt)
             local character = Players.LocalPlayer.Character
             if character then
                 local hrp_orbit = character:FindFirstChild("HumanoidRootPart")
                 if hrp_orbit then
+                    if hrp_orbit ~= lastOrbitHrp then
+                        lastOrbitHrp = hrp_orbit
+                        enableFakeCamera() -- Reset camera on respawn!
+                    end
+                    
                     local now = tick()
                     if now - lastTargetUpdate > 0.25 then
                         lastTargetUpdate = now
