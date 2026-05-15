@@ -203,8 +203,7 @@ local function applyQueueOnTeleport()
         local qot = queue_on_teleport or (syn and syn.queue_on_teleport) or getgenv().queue_on_teleport
         if qot then
             local code = [[
-                -- Once you upload scar.lol to GitHub, put the raw link here:
-                -- loadstring(game:HttpGet("YOUR_SCAR_LOL_RAW_LINK_HERE"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/voidedryann-droid/scar/refs/heads/main/rivals.lua"))()
             ]]
             pcall(function() qot(code) end)
         end
