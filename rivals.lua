@@ -2,8 +2,8 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
--- Wait 15 seconds to ensure UE Ragebot and other executors fully load and initialize their camera hooks before scar.lol loads
-task.wait(15)
+-- Wait 3 seconds to ensure UE Ragebot and other executors fully load and initialize their camera hooks before scar.lol loads
+task.wait(3)
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local rs = game:GetService("RunService")
