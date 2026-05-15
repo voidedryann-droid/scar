@@ -73,13 +73,12 @@ local function disableFakeCamera()
 end
 
 local function loadConfig()
-    if isfile and isfile(configFileName) then
-        local success, result = pcall(function()
-            return HttpService:JSONDecode(readfile(configFileName))
-        end)
-        if success and type(result) == "table" then
-            return result
-        end
+    local success, result = pcall(function()
+        if isfile and not isfile(configFileName) then error("File not found") end
+        return HttpService:JSONDecode(readfile(configFileName))
+    end)
+    if success and type(result) == "table" then
+        return result
     end
     return defaultConfig
 end
@@ -200,10 +199,12 @@ end)
 
 local function applyQueueOnTeleport()
     if autoExecute then
-        local qot = queue_on_teleport or (syn and syn.queue_on_teleport) or getgenv().queue_on_teleport
+        local env = (getgenv and getgenv()) or getfenv(0)
+        local qot = queue_on_teleport or queueonteleport or (syn and syn.queue_on_teleport) or env.queue_on_teleport or env.queueonteleport
         if qot then
+            -- Bypass GitHub cache using a randomized query parameter
             local code = [[
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/voidedryann-droid/scar/refs/heads/main/rivals.lua"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/voidedryann-droid/scar/refs/heads/main/rivals.lua?t=" .. tostring(tick())))()
             ]]
             pcall(function() qot(code) end)
         end
@@ -307,11 +308,27 @@ local function toggleVoid(forceState)
         UpdateStatus()
         tween(VoidButton, {BackgroundColor3 = Color3.fromRGB(60, 40, 80)}, 0.3) -- Active color
         
+        local lastHrp = nil
+        local spawnDelay = 0
+        
         voidConnection1 = rs.Heartbeat:Connect(function()
             local character = Players.LocalPlayer.Character
             if character then
                 hrp = character:FindFirstChild("HumanoidRootPart")
                 if hrp then
+                    if hrp ~= lastHrp then
+                        lastHrp = hrp
+                        spawnDelay = tick() + 2 -- Wait 2 seconds for safe spawn
+                        clientc = hrp.CFrame
+                    end
+                    
+                    if tick() < spawnDelay then
+                        clientc = hrp.CFrame
+                        clientv = hrp.AssemblyLinearVelocity
+                        clientva = hrp.AssemblyAngularVelocity
+                        return
+                    end
+                    
                     clientc = hrp.CFrame
                     clientv = hrp.AssemblyLinearVelocity
                     clientva = hrp.AssemblyAngularVelocity
@@ -324,7 +341,7 @@ local function toggleVoid(forceState)
         end)
         
         rs:BindToRenderStep("csync", Enum.RenderPriority.First.Value, function()
-            if hrp and clientc then
+            if hrp and clientc and tick() >= spawnDelay then
                 hrp.CFrame = clientc
                 hrp.AssemblyLinearVelocity = clientv
                 hrp.AssemblyAngularVelocity = clientva
@@ -529,7 +546,7 @@ task.spawn(function()
     autoExecute = savedConfig.autoExecute or false
     
     if autoExecute then
-        AutoButton.TextColor3 = Color3.fromRGB(180, 140, 255)
+        tween(AutoButton, {TextColor3 = Color3.fromRGB(180, 140, 255)})
         applyQueueOnTeleport()
         
         if savedConfig.voidActive then
