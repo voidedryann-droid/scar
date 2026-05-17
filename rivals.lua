@@ -1980,16 +1980,14 @@ registerTeleportQueue = function()
         if queue then
             local code = [[
                 pcall(function()
-                    if isfile then
-                        if isfile("rivals.lua") then
-                            loadstring(readfile("rivals.lua"))()
-                        elseif isfile("scar.lua") then
-                            loadstring(readfile("scar.lua"))()
-                        end
-                    end
+                    print("scar.lol - Queue executing on teleport...")
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/voidedryann-droid/scar/refs/heads/main/rivals.lua"))()
                 end)
             ]]
             queue(code)
+            print("scar.lol - Teleport queue successfully registered using GitHub raw link!")
+        else
+            print("scar.lol - WARNING: queue_on_teleport is not supported by your executor! Please put your GitHub loadstring inside your executor's 'autoexec' folder for automatic execution.")
         end
     end)
 end
