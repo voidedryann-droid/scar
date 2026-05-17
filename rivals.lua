@@ -63,6 +63,16 @@ local Settings = {
     AutoExecute = false,
 }
 
+--------------------------------------------------
+-- FEATURE STATES
+--------------------------------------------------
+local FeatureStates = {
+    OrbitAura = false,
+    AutoCollect = false,
+    AutoRespawn = false,
+    FPSBoost = false,
+}
+
 -- Declare local functions for early scope access in buttons/toggles
 local registerTeleportQueue
 local createNotification
@@ -127,15 +137,7 @@ end
 -- Autoload immediately on startup
 loadConfig()
 
---------------------------------------------------
--- FEATURE STATES
---------------------------------------------------
-local FeatureStates = {
-    OrbitAura = false,
-    AutoCollect = false,
-    AutoRespawn = false,
-    FPSBoost = false,
-}
+
 
 --------------------------------------------------
 -- ORBIT AURA VARIABLES (ORIGINAL UNKILLABLE VERSION)
