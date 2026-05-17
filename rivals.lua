@@ -33,6 +33,7 @@ local defaultConfig = {
     voidActive = false,
     orbitActive = false,
     autoExecute = false,
+    autoCollect = false,
     autoRespawn = false,
     fpsBoost = false
 }
@@ -43,10 +44,12 @@ local autoRespawn = false
 local fpsBoost = false
 local voidActive = false
 local orbitActive = false
+local autoCollect = false
 
 local respawnConnection
 local voidConnection
 local orbitConnection
+local collectConnection
 
 local function loadConfig()
     local success, result = pcall(function()
@@ -63,6 +66,7 @@ local function saveConfig()
             voidActive = voidActive,
             orbitActive = orbitActive,
             autoExecute = autoExecute,
+            autoCollect = autoCollect,
             autoRespawn = autoRespawn,
             fpsBoost = fpsBoost
         }
@@ -79,6 +83,29 @@ end
 --------------------------------------------------
 -- UTILITY & AUTOMATION LOGIC (FUNCTIONAL)
 --------------------------------------------------
+
+-- AUTO COLLECT
+local function toggleCollect(state)
+    autoCollect = state
+    if autoCollect then
+        if collectConnection then collectConnection:Disconnect() end
+        collectConnection = rs.RenderStepped:Connect(function()
+            local char = Players.LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            for _, obj in pairs(workspace:GetChildren()) do
+                if obj.Name == "_drop" and obj:IsA("BasePart") then
+                    if firetouchinterest then
+                        firetouchinterest(hrp, obj, 0)
+                        firetouchinterest(hrp, obj, 1)
+                    end
+                end
+            end
+        end)
+    else
+        if collectConnection then collectConnection:Disconnect() collectConnection = nil end
+    end
+end
 
 -- AUTO RESPAWN
 local function toggleRespawn(state)
@@ -291,6 +318,21 @@ AutomationGroup:AddToggle('OrbitToggle', {
     NoUI = true
 })
 
+AutomationGroup:AddToggle('CollectToggle', {
+    Text = 'Auto Collect',
+    Default = false,
+    Tooltip = 'Automatically collects drops',
+    Callback = function(Value)
+        toggleCollect(Value)
+        saveConfig()
+    end
+}):AddKeyPicker('CollectKey', { 
+    Default = 'None', 
+    Text = 'Auto Collect', 
+    SyncToggleState = true,
+    NoUI = true
+})
+
 AutomationGroup:AddToggle('RespawnToggle', {
     Text = 'Auto Respawn',
     Default = false,
@@ -369,6 +411,7 @@ Library:OnUnload(function()
     toggleVoid(false)
     toggleOrbit(false)
     toggleFPS(false)
+    toggleCollect(false)
 end)
 
 --------------------------------------------------
@@ -385,4 +428,5 @@ task.spawn(function()
     if cfg.fpsBoost and Toggles and Toggles.FPSToggle then Toggles.FPSToggle:SetValue(true) end
     if cfg.voidActive and Toggles and Toggles.VoidToggle then Toggles.VoidToggle:SetValue(true) end
     if cfg.orbitActive and Toggles and Toggles.OrbitToggle then Toggles.OrbitToggle:SetValue(true) end
+    if cfg.autoCollect and Toggles and Toggles.CollectToggle then Toggles.CollectToggle:SetValue(true) end
 end)
