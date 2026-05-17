@@ -242,9 +242,16 @@ local function getClosestEnemy()
     return closest
 end
 
+local voidAngle = 0
 local function teleportToVoid()
     if hrp then
-        hrp.CFrame = CFrame.new(VOID_POS)
+        voidAngle = (voidAngle + 25) % 360 -- Spin extremely fast (1500+ degrees per second!)
+        local x = math.cos(math.rad(voidAngle)) * 35 -- Wide untargetable radius
+        local z = math.sin(math.rad(voidAngle)) * 35
+        local y = -500 + math.sin(math.rad(voidAngle * 2)) * 10 -- Rapid vertical bobbing
+        local dynamicVoidPos = Vector3.new(x, y, z)
+        
+        hrp.CFrame = CFrame.new(dynamicVoidPos)
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
     end
@@ -285,7 +292,13 @@ local function toggleOrbitAura(enabled)
             orbitConnection = nil
         end
         if character and hrp then
-            hrp.CFrame = CFrame.new(0, 5, 0)
+            -- Safe drop: Teleport safely right above the closest enemy!
+            local enemy = getClosestEnemy()
+            if enemy and enemy:FindFirstChild("HumanoidRootPart") then
+                hrp.CFrame = enemy.HumanoidRootPart.CFrame + Vector3.new(0, 10, 0)
+            else
+                hrp.CFrame = CFrame.new(0, 10, 0)
+            end
             Camera.CameraSubject = character:FindFirstChild("Humanoid")
         end
     end
