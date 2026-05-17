@@ -36,12 +36,23 @@ local defaultConfig = {
     autoExecute = false,
     autoCollect = false,
     autoRespawn = false,
-    fpsBoost = false
+    fpsBoost = false,
+    espActive = false,
+    espType = "Highlight",
+    espColorR = 255, espColorG = 0, espColorB = 0,
+    espTransparency = 0.5
 }
 
 local voidActive, orbitActive, autoExecute = false, false, false
 local autoCollect, autoRespawn, fpsBoost = false, false, false
 local voidConnection, orbitConnection, collectConnection, respawnConnection
+
+-- ESP Settings
+local espActive = false
+local espType = "Highlight"
+local espColor = Color3.fromRGB(255, 0, 0)
+local espTransparency = 0.5
+local espCache = {}
 
 local function loadConfig()
     local success, result = pcall(function()
@@ -60,7 +71,11 @@ local function saveConfig()
             autoExecute = autoExecute,
             autoCollect = autoCollect,
             autoRespawn = autoRespawn,
-            fpsBoost = fpsBoost
+            fpsBoost = fpsBoost,
+            espActive = espActive,
+            espType = espType,
+            espColorR = espColor.R * 255, espColorG = espColor.G * 255, espColorB = espColor.B * 255,
+            espTransparency = espTransparency
         }
         pcall(function() writefile(configFileName, HttpService:JSONEncode(data)) end)
     end
@@ -70,6 +85,105 @@ local function getVoidValue()
     local val = math.random(1147483646, 2147483646)
     return math.random() > 0.5 and val or -val
 end
+
+--------------------------------------------------
+-- ESP CORE
+--------------------------------------------------
+local function clearESP(player)
+    if espCache[player] then
+        if espCache[player].type == "Highlight" then
+            if espCache[player].obj then espCache[player].obj:Destroy() end
+        elseif espCache[player].type == "ForceField" then
+            if player.Character then
+                for part, data in pairs(espCache[player].originalMats) do
+                    if part and part.Parent then
+                        part.Material = data.Material
+                        part.Color = data.Color
+                    end
+                end
+            end
+        end
+        espCache[player] = nil
+    end
+end
+
+local function clearAllESP()
+    for player, _ in pairs(espCache) do
+        clearESP(player)
+    end
+end
+
+local function updateESP()
+    if not espActive then
+        clearAllESP()
+        return
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == Players.LocalPlayer then continue end
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        
+        if char and hrp then
+            local hum = char:FindFirstChild("Humanoid")
+            if hum and hum.Health > 0 then
+                if espCache[player] and espCache[player].type ~= espType then
+                    clearESP(player)
+                end
+                
+                if espType == "Highlight" then
+                    if not espCache[player] then
+                        local hl = Instance.new("Highlight")
+                        hl.Parent = char
+                        hl.Name = "ESP_Highlight"
+                        espCache[player] = {type = "Highlight", obj = hl}
+                    end
+                    local hl = espCache[player].obj
+                    if hl.Parent ~= char then hl.Parent = char end
+                    hl.FillColor = espColor
+                    hl.OutlineColor = espColor
+                    hl.FillTransparency = espTransparency
+                    hl.OutlineTransparency = 0.1
+                    
+                elseif espType == "ForceField" then
+                    if not espCache[player] then
+                        espCache[player] = {type = "ForceField", originalMats = {}}
+                    end
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" and part.Transparency < 1 then
+                            if not espCache[player].originalMats[part] then
+                                espCache[player].originalMats[part] = {
+                                    Material = part.Material,
+                                    Color = part.Color
+                                }
+                            end
+                            part.Material = Enum.Material.ForceField
+                            part.Color = espColor
+                        end
+                    end
+                end
+            else
+                clearESP(player) -- Dead
+            end
+        else
+            clearESP(player) -- No char
+        end
+    end
+end
+
+local espConnection
+local function toggleESP(state)
+    espActive = state
+    if espActive then
+        if not espConnection then
+            espConnection = rs.RenderStepped:Connect(updateESP)
+        end
+    else
+        if espConnection then espConnection:Disconnect(); espConnection = nil end
+        clearAllESP()
+    end
+end
+Players.PlayerRemoving:Connect(clearESP)
 
 --------------------------------------------------
 -- CORE LOGIC FUNCTIONS
@@ -84,16 +198,14 @@ local function toggleVoid(state)
             local char = Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                -- Rapid Teleportation in high altitude void
                 hrp.CFrame = CFrame.new(getVoidValue(), math.random(200000, 500000), getVoidValue())
                 hrp.AssemblyLinearVelocity = Vector3.new(getVoidValue(), getVoidValue(), getVoidValue())
                 
-                -- Find target to orbit camera
                 local closest = nil
                 for _, v in pairs(Players:GetPlayers()) do
                     if v ~= Players.LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
                         closest = v.Character.HumanoidRootPart
-                        break -- Just take the first valid target
+                        break
                     end
                 end
                 
@@ -120,10 +232,9 @@ local function toggleOrbit(state)
             local char = Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                local closest, dist = nil, 10000 -- Massive range
+                local closest, dist = nil, 10000
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        -- Target everyone including other void spammers
                         local d = (p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
                         if d < dist then closest, dist = p.Character.HumanoidRootPart, d end
                     end
@@ -241,6 +352,7 @@ local Tabs = {
 }
 
 local LeftGroupBox = Tabs.Main:AddLeftGroupbox('Features')
+local RightGroupBox = Tabs.Main:AddRightGroupbox('Visuals')
 
 LeftGroupBox:AddToggle('VoidToggle', {
     Text = 'Toggle Void Spam',
@@ -250,7 +362,7 @@ LeftGroupBox:AddToggle('VoidToggle', {
         toggleVoid(Value)
         saveConfig()
     end
-})
+}):AddKeyPicker('VoidKey', { Default = 'None', Text = 'Void Spam', SyncToggleState = true })
 
 LeftGroupBox:AddToggle('OrbitToggle', {
     Text = 'Toggle Orbit',
@@ -260,7 +372,7 @@ LeftGroupBox:AddToggle('OrbitToggle', {
         toggleOrbit(Value)
         saveConfig()
     end
-})
+}):AddKeyPicker('OrbitKey', { Default = 'None', Text = 'Orbit', SyncToggleState = true })
 
 LeftGroupBox:AddToggle('CollectToggle', {
     Text = 'Auto Collect',
@@ -270,7 +382,7 @@ LeftGroupBox:AddToggle('CollectToggle', {
         toggleCollect(Value)
         saveConfig()
     end
-})
+}):AddKeyPicker('CollectKey', { Default = 'None', Text 'Auto Collect', SyncToggleState = true })
 
 LeftGroupBox:AddToggle('RespawnToggle', {
     Text = 'Auto Respawn',
@@ -280,7 +392,7 @@ LeftGroupBox:AddToggle('RespawnToggle', {
         toggleRespawn(Value)
         saveConfig()
     end
-})
+}):AddKeyPicker('RespawnKey', { Default = 'None', Text = 'Auto Respawn', SyncToggleState = true })
 
 LeftGroupBox:AddToggle('FPSToggle', {
     Text = 'FPS Booster',
@@ -290,10 +402,55 @@ LeftGroupBox:AddToggle('FPSToggle', {
         toggleFPS(Value)
         saveConfig()
     end
+}):AddKeyPicker('FPSKey', { Default = 'None', Text = 'FPS Booster', SyncToggleState = true })
+
+
+RightGroupBox:AddToggle('ESPToggle', {
+    Text = 'Enable ESP',
+    Default = false,
+    Tooltip = 'Shows players through walls',
+    Callback = function(Value)
+        toggleESP(Value)
+        saveConfig()
+    end
+}):AddKeyPicker('ESPKey', { Default = 'None', Text = 'Enable ESP', SyncToggleState = true })
+
+RightGroupBox:AddDropdown('ESPType', {
+    Values = { 'Highlight', 'ForceField' },
+    Default = 1,
+    Text = 'ESP Mode',
+    Callback = function(Value)
+        espType = Value
+        if espActive then clearAllESP() end
+        saveConfig()
+    end
 })
 
-LeftGroupBox:AddToggle('AutoExecToggle', {
-    Text = 'Auto Execute',
+RightGroupBox:AddColorPicker('ESPColor', {
+    Default = Color3.fromRGB(255, 0, 0),
+    Title = 'ESP Color',
+    Callback = function(Value)
+        espColor = Value
+        saveConfig()
+    end
+})
+
+RightGroupBox:AddSlider('ESPTransparency', {
+    Text = 'Fill Transparency',
+    Default = 0.5,
+    Min = 0,
+    Max = 1,
+    Rounding = 1,
+    Callback = function(Value)
+        espTransparency = Value
+        saveConfig()
+    end
+})
+
+local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+
+MenuGroup:AddToggle('AutoExecToggle', {
+    Text = 'Auto Execute (Queue On Teleport)',
     Default = false,
     Tooltip = 'Automatically executes scar.lol on server hop',
     Callback = function(Value)
@@ -303,7 +460,15 @@ LeftGroupBox:AddToggle('AutoExecToggle', {
     end
 })
 
-local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+MenuGroup:AddToggle('KeybindsListToggle', {
+    Text = 'Show Keybinds',
+    Default = true,
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
+    end
+})
+Library.KeybindFrame.Visible = true -- initialize visible by default
+
 MenuGroup:AddButton('Unload', function() Library:Unload() end)
 MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'RightShift', NoUI = true, Text = 'Menu keybind' })
 Library.ToggleKeybind = Options.MenuKeybind
@@ -330,6 +495,7 @@ Library:OnUnload(function()
     toggleCollect(false)
     toggleRespawn(false)
     toggleFPS(false)
+    toggleESP(false)
 end)
 
 --------------------------------------------------
@@ -337,10 +503,18 @@ end)
 --------------------------------------------------
 task.spawn(function()
     local cfg = loadConfig()
+    if cfg.espColorR then
+        espColor = Color3.fromRGB(cfg.espColorR / 255, cfg.espColorG / 255, cfg.espColorB / 255)
+        Options.ESPColor:SetValueRGB(espColor)
+    end
+    if cfg.espTransparency then Options.ESPTransparency:SetValue(cfg.espTransparency) end
+    if cfg.espType then Options.ESPType:SetValue(cfg.espType) end
+
     if cfg.autoExecute then Options.AutoExecToggle:SetValue(true) end
     if cfg.voidActive then Options.VoidToggle:SetValue(true) end
     if cfg.orbitActive then Options.OrbitToggle:SetValue(true) end
     if cfg.autoCollect then Options.CollectToggle:SetValue(true) end
     if cfg.autoRespawn then Options.RespawnToggle:SetValue(true) end
     if cfg.fpsBoost then Options.FPSToggle:SetValue(true) end
+    if cfg.espActive then Options.ESPToggle:SetValue(true) end
 end)
