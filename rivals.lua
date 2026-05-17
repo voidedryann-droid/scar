@@ -127,8 +127,8 @@ local function toggleVoid(state)
     if voidActive then
         -- Mutually exclusive with Orbit to prevent physics conflicts and crashes
         if orbitActive then
-            if Options and Options.OrbitToggle then
-                Options.OrbitToggle:SetValue(false)
+            if Toggles and Toggles.OrbitToggle then
+                Toggles.OrbitToggle:SetValue(false)
             else
                 orbitActive = false
                 if orbitConnection then orbitConnection:Disconnect() orbitConnection = nil end
@@ -185,8 +185,8 @@ local function toggleOrbit(state)
     if orbitActive then
         -- Mutually exclusive with Void Spam to prevent physics conflicts and crashes
         if voidActive then
-            if Options and Options.VoidToggle then
-                Options.VoidToggle:SetValue(false)
+            if Toggles and Toggles.VoidToggle then
+                Toggles.VoidToggle:SetValue(false)
             else
                 voidActive = false
                 if voidConnection then voidConnection:Disconnect() voidConnection = nil end
@@ -380,9 +380,9 @@ task.spawn(function()
     -- Ensure Option elements are fully registered before setting values to avoid startup execution crashes
     task.wait(1.5) 
     
-    if cfg.autoExecute and Options and Options.AutoExecToggle then Options.AutoExecToggle:SetValue(true) end
-    if cfg.autoRespawn and Options and Options.RespawnToggle then Options.RespawnToggle:SetValue(true) end
-    if cfg.fpsBoost and Options and Options.FPSToggle then Options.FPSToggle:SetValue(true) end
-    if cfg.voidActive and Options and Options.VoidToggle then Options.VoidToggle:SetValue(true) end
-    if cfg.orbitActive and Options and Options.OrbitToggle then Options.OrbitToggle:SetValue(true) end
+    if cfg.autoExecute and Toggles and Toggles.AutoExecToggle then Toggles.AutoExecToggle:SetValue(true) end
+    if cfg.autoRespawn and Toggles and Toggles.RespawnToggle then Toggles.RespawnToggle:SetValue(true) end
+    if cfg.fpsBoost and Toggles and Toggles.FPSToggle then Toggles.FPSToggle:SetValue(true) end
+    if cfg.voidActive and Toggles and Toggles.VoidToggle then Toggles.VoidToggle:SetValue(true) end
+    if cfg.orbitActive and Toggles and Toggles.OrbitToggle then Toggles.OrbitToggle:SetValue(true) end
 end)
