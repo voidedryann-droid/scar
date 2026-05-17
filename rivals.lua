@@ -76,7 +76,7 @@ end
 
 -- Generates safe high-altitude coordinates to prevent float/physics engine crashes
 local function getVoidValue()
-    local val = math.random(100000, 300000)
+    local val = math.random(4000, 8000)
     return math.random() > 0.5 and val or -val
 end
 
@@ -88,22 +88,25 @@ end
 local function toggleCollect(state)
     autoCollect = state
     if autoCollect then
-        if collectConnection then collectConnection:Disconnect() end
-        collectConnection = rs.RenderStepped:Connect(function()
-            local char = Players.LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-            for _, obj in pairs(workspace:GetChildren()) do
-                if obj.Name == "_drop" and obj:IsA("BasePart") then
-                    if firetouchinterest then
-                        firetouchinterest(hrp, obj, 0)
-                        firetouchinterest(hrp, obj, 1)
+        task.spawn(function()
+            while autoCollect do
+                local char = Players.LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    for _, obj in ipairs(workspace:GetChildren()) do
+                        if not autoCollect then break end
+                        if obj.Name == "_drop" and obj:IsA("BasePart") then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, obj, 0)
+                                task.wait()
+                                firetouchinterest(hrp, obj, 1)
+                            end
+                        end
                     end
                 end
+                task.wait(0.1)
             end
         end)
-    else
-        if collectConnection then collectConnection:Disconnect() collectConnection = nil end
     end
 end
 
@@ -135,14 +138,22 @@ local function toggleFPS(state)
     if fpsBoost then
         Lighting.GlobalShadows = false
         Lighting.Brightness = 1
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then 
-                obj.Material = Enum.Material.Plastic 
-                obj.Reflectance = 0
-            elseif obj:IsA("Decal") or obj:IsA("Texture") then 
-                obj.Transparency = 1 
+        task.spawn(function()
+            local descendants = workspace:GetDescendants()
+            local batchSize = 300
+            for i, obj in ipairs(descendants) do
+                if not fpsBoost then break end
+                if obj:IsA("BasePart") then 
+                    obj.Material = Enum.Material.Plastic 
+                    obj.Reflectance = 0
+                elseif obj:IsA("Decal") or obj:IsA("Texture") then 
+                    obj.Transparency = 1 
+                end
+                if i % batchSize == 0 then
+                    task.wait()
+                end
             end
-        end
+        end)
     else
         Lighting.GlobalShadows = true
     end
@@ -168,7 +179,7 @@ local function toggleVoid(state)
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
                 -- Set stable coordinates and clean velocity vectors to prevent physics crashes
-                hrp.CFrame = CFrame.new(getVoidValue(), math.random(200000, 300000), getVoidValue())
+                hrp.CFrame = CFrame.new(getVoidValue(), math.random(4000, 8000), getVoidValue())
                 hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 
                 local closest = nil
